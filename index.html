@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CPU Pipeline Simulator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f0f0f0;
+      color: #333;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+
+    .section {
+      background-color: white;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+
+    h2 {
+      color: #2c3e50;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+
+    .clock {
+      font-size: 24px;
+      font-weight: bold;
+      color: #e74c3c;
+      text-align: center;
+      margin: 10px 0 30px 0;
+    }
+
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .pipeline-stage {
+      background-color: #ecf0f1;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+      padding: 10px;
+      text-align: center;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      word-break: break-word; /* Allow long instruction strings to wrap */
+    }
+
+    .stage-name {
+      font-weight: bold;
+      color: #7f8c8d;
+      margin-bottom: 5px; /* Reduced margin */
+      font-size: 14px;
+    }
+
+    .stage-content {
+      font-family: monospace;
+      background-color: #f9f9f9;
+      padding: 5px;
+      border-radius: 3px;
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px; /* Smaller font for potentially long strings */
+      overflow: auto; /* Add scroll if content is too long */
+      max-height: 60px; /* Limit height */
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0;
+      justify-content: center;
+    }
+
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+     button:disabled {
+        background-color: #bdc3c7;
+        cursor: not-allowed;
+     }
+
+    .registers-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .register {
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 8px;
+      text-align: center;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .memory-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      height: 300px;
+      overflow-y: auto;
+      padding-right: 5px; /* Add some padding for the scrollbar */
+    }
+
+    .memory-cell {
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 5px;
+      text-align: center;
+      font-family: monospace;
+      font-size: 12px;
+       white-space: nowrap; /* Prevent address/value from wrapping inside cell */
+    }
+
+    .status {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 10px;
+      font-style: italic;
+      color: #7f8c8d;
+      margin-top: 20px;
+    }
+
+    .highlight {
+      background-color: #ffeb3b;
+      transition: background-color 0.2s; /* Faster transition */
+    }
+
+    .special-registers {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .special-register {
+      flex: 1;
+      background-color: #e8f4f8;
+      border: 1px solid #b3d4fc;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      font-family: monospace;
+      font-size: 14px;
+    }
+     .special-register div:first-child {
+        font-size: 12px;
+        font-weight: bold;
+        color: #7f8c8d;
+        margin-bottom: 5px;
+     }
+
+    .queue {
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      margin-top: 15px;
+      max-height: 200px; /* Increased height */
+      overflow-y: auto;
+    }
+
+    .queue-item {
+      font-family: monospace;
+      padding: 3px 5px;
+      margin: 2px 0;
+      background-color: #f0f7fc;
+      border-radius: 3px;
+      font-size: 12px;
+       white-space: nowrap; /* Prevent queue items from wrapping */
+       overflow: hidden; /* Hide overflow */
+       text-overflow: ellipsis; /* Show ellipsis for overflow */
+    }
+     .queue-item:first-child {
+         font-weight: bold; /* Highlight the next instruction to be fetched */
+     }
+
+  </style>
+</head>
+<body>
+  <h1>CPU Pipeline Simulator</h1>
+
+  <div class="controls">
+    <button id="loadBtn">Load Instructions</button>
+    <button id="stepBtn" disabled>Step</button>
+    <button id="runBtn" disabled>Run</button>
+    <button id="resetBtn">Reset</button>
+    <button id="statsBtn" disabled>Get Stats</button>
+    <label><input type="checkbox" id="useCache" checked> Use Cache</label>
+    <label><input type="checkbox" id="usePipeline" checked> Use Pipeline</label>
+
+  </div>
+
+  <div class="clock" id="clockCycle">Clock Cycle: 0</div>
+
+  <div class="section" id="perfSection" style="display:none;">
+    <h2>Performance</h2>
+    <ul>
+      <li>Cycles: <span id="stat-cycles">—</span></li>
+      <li>Instructions Retired: <span id="stat-instr">—</span></li>
+      <li>Stalls: <span id="stat-stalls">—</span></li>
+      <li>IPC: <span id="stat-ipc">—</span></li>
+      <li>Cache Hit Rate: <span id="stat-hitrate">—</span></li>
+    </ul>
+  </div>
+
+  <div class="container">
+    <div class="left-column">
+      <div class="section">
+        <h2>Pipeline Stages</h2>
+        <div class="pipeline-grid">
+          <div class="pipeline-stage">
+            <div class="stage-name">Fetch (FT)</div>
+            <div class="stage-content" id="fetch-stage">-</div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-name">Decode (DEC)</div>
+            <div class="stage-content" id="decode-stage">-</div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-name">Execute (EX)</div>
+            <div class="stage-content" id="execute-stage">-</div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-name">Memory (MEM)</div>
+            <div class="stage-content" id="memory-stage">-</div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-name">Writeback (WB)</div>
+            <div class="stage-content" id="writeback-stage">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Special Registers</h2>
+        <div class="special-registers">
+          <div class="special-register">
+            <div>Program Counter (PC)</div>
+            <div id="pc-value">-1</div>
+          </div>
+          <div class="special-register">
+            <div>Instruction Register (IR)</div>
+            <div id="ir-value">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>General Registers</h2>
+        <div class="registers-grid" id="registers-container">
+          </div>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <div class="section">
+        <h2>Instruction Queue</h2>
+        <div class="queue" id="instruction-queue">
+          </div>
+      </div>
+
+      <div class="section">
+        <h2>Memory Display</h2>
+        <div>
+          <select id="memory-range" onchange="updateMemoryRange()">
+            <option value="0">First 64 addresses (0-63)</option>
+            <option value="100">Sort Array (100-119)</option>
+            <option value="200">Matrix A (200-263)</option>
+            <option value="300">Matrix B (300-363)</option>
+            <option value="400">Matrix C (400-463)</option>
+          </select>
+        </div>
+        <div class="memory-grid" id="memory-container">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status" id="status-message">Load instructions to begin.</div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    // UI elements
+    const clockCycleElement = document.getElementById('clockCycle');
+    const fetchStageElement = document.getElementById('fetch-stage');
+    const decodeStageElement = document.getElementById('decode-stage');
+    const executeStageElement = document.getElementById('execute-stage');
+    const memoryStageElement = document.getElementById('memory-stage');
+    const writebackStageElement = document.getElementById('writeback-stage');
+    const pcValueElement = document.getElementById('pc-value');
+    const irValueElement = document.getElementById('ir-value');
+    const registersContainer = document.getElementById('registers-container');
+    const instructionQueueContainer = document.getElementById('instruction-queue');
+    const memoryContainer = document.getElementById('memory-container');
+    const loadBtn = document.getElementById('loadBtn');
+    const stepBtn = document.getElementById('stepBtn');
+    const runBtn = document.getElementById('runBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusMessage = document.getElementById('status-message');
+    const statsBtn        = document.getElementById('statsBtn');
+    const perfSection     = document.getElementById('perfSection');
+    const statCycles      = document.getElementById('stat-cycles');
+    const statInstr       = document.getElementById('stat-instr');
+    const statStalls      = document.getElementById('stat-stalls');
+    const statIpc         = document.getElementById('stat-ipc');
+    const statHitRate     = document.getElementById('stat-hitrate');
+    const useCache     = document.getElementById('useCache');
+    const usePipeline  = document.getElementById('usePipeline');
+
+    useCache.addEventListener('change', e => {
+    ipcRenderer.send('toggle-cache', e.target.checked);
+    });
+    usePipeline.addEventListener('change', e => {
+    ipcRenderer.send('toggle-pipeline', e.target.checked);
+    });
+
+    // State variables
+    let isRunning = false;
+    let runInterval;
+    const runSpeed = 500; // milliseconds between cycles in Run mode
+
+    // Initialize the UI with empty registers
+    function initializeRegistersUI() {
+       registersContainer.innerHTML = ''; // Clear existing
+        for (let i = 0; i < 32; i++) {
+            const registerElement = document.createElement('div');
+            registerElement.className = 'register';
+            registerElement.id = `r${i}`;
+            registerElement.innerText = `R${i}: 0`;
+            registersContainer.appendChild(registerElement);
+        }
+    }
+
+    // Initialize memory display (first 64 addresses)
+    function initializeMemoryUI() {
+  memoryContainer.innerHTML = ''; // Clear existing
+  // Assuming memory addresses 0-63 for initial display
+  for (let i = 0; i < 64; i++) {
+    const memoryCell = document.createElement('div');
+    memoryCell.className = 'memory-cell';
+    memoryCell.id = `mem-${i}`;
+    memoryCell.innerText = `Addr ${i}: 0`;
+    memoryContainer.appendChild(memoryCell);
+  }
+  
+  // Add the memory range selector
+  document.getElementById('memory-range').value = '0';
+}
+
+    // Initial UI setup
+    initializeRegistersUI();
+    initializeMemoryUI();
+    updateControlButtons(false, false, false, true); // load, step, run, reset
+
+    // Helper to manage button states
+    function updateControlButtons(load, step, run, reset) {
+        loadBtn.disabled = !load;
+        stepBtn.disabled = !step;
+        runBtn.disabled = !run;
+        resetBtn.disabled = !reset;
+    }
+
+    function updateMemoryRange() {
+  const startAddr = parseInt(document.getElementById('memory-range').value);
+  memoryContainer.innerHTML = '';
+  
+  // Display 64 addresses from the selected starting point
+  for (let i = 0; i < 64; i++) {
+    const addr = startAddr + i;
+    const memoryCell = document.createElement('div');
+    memoryCell.className = 'memory-cell';
+    memoryCell.id = `mem-${addr}`;
+    memoryCell.innerText = `Addr ${addr}: 0`;
+    memoryContainer.appendChild(memoryCell);
+  }
+}
+
+    function formatInstructionForGUI(instr) {
+      if (instr === null || instr === undefined) return '-';
+
+      // raw 32-bit word?
+      if (typeof instr === 'number') {
+        return '0x' + instr.toString(16).padStart(8, '0');
+      }
+      if (typeof instr === 'string') return instr;
+
+      // instruction object
+      let details = instr.type;
+      switch (instr.type) {
+        case 'ADD':
+        case 'SUB':
+          details += ` R${instr.RdNum}, R${instr.RnNum}, R${instr.RmNum}`;
+          if (instr.result !== undefined) details += ` [Res: ${instr.result}]`;
+          break;
+        case 'ADDI':
+        case 'SUBI':
+          details += ` R${instr.RdNum}, R${instr.RnNum}, ${instr.immediateStr}`;
+          if (instr.result !== undefined) details += ` [Res: ${instr.result}]`;
+          break;
+        case 'LOAD':
+        case 'STR':
+          details += ` R${instr.RdNum}, R${instr.RnNum}, ${instr.offsetStr}`;
+          if (instr.memoryAddress !== undefined) details += ` [Addr: ${instr.memoryAddress}]`;
+          if (instr.memoryResult  !== undefined) details += ` [Val: ${instr.memoryResult}]`;
+          break;
+        case 'MOV':
+          details += ` R${instr.RdNum}, R${instr.RnNum}`;
+          if (instr.result !== undefined) details += ` [Res: ${instr.result}]`;
+          break;
+        case 'MOVI':
+          details += ` R${instr.RdNum}, ${instr.immediateStr}`;
+          if (instr.result !== undefined) details += ` [Res: ${instr.result}]`;
+          break;
+        case 'NOP':
+          details = 'NOP';
+          break;
+      }
+      return details;
+    }
+
+
+    // Add event listeners for buttons
+    loadBtn.addEventListener('click', () => {
+      updateControlButtons(false, false, false, true); // Disable controls while loading
+      statusMessage.innerText = 'Loading instructions...';
+      ipcRenderer.send('start-simulation');
+    });
+
+    stepBtn.addEventListener('click', () => {
+        if (!isRunning) { // Only step if not in run mode
+            ipcRenderer.send('step-simulation');
+        }
+    });
+
+    runBtn.addEventListener('click', () => {
+      if (!isRunning) {
+        isRunning = true;
+        runBtn.innerText = 'Pause';
+         stepBtn.disabled = true; // Disable step button while running
+        runInterval = setInterval(() => {
+          ipcRenderer.send('step-simulation');
+        }, runSpeed); // Run every 'runSpeed' milliseconds
+      } else {
+        isRunning = false;
+        runBtn.innerText = 'Run';
+        stepBtn.disabled = false; // Enable step button when paused
+        clearInterval(runInterval);
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (isRunning) {
+        isRunning = false;
+        runBtn.innerText = 'Run';
+        clearInterval(runInterval);
+      }
+      updateControlButtons(false, false, false, false); // Disable controls during reset
+      statusMessage.innerText = 'Resetting simulation...';
+      ipcRenderer.send('reset-simulation');
+    });
+
+    // Listen for state updates from the main process
+    ipcRenderer.on('update-state', (event, data) => {
+      // Update pipeline stages (now receiving formatted strings)
+      fetchStageElement.innerText     = formatInstructionForGUI(data.pipeline.fetch);
+      decodeStageElement.innerText    = formatInstructionForGUI(data.pipeline.decode);
+      executeStageElement.innerText   = formatInstructionForGUI(data.pipeline.execute);
+      memoryStageElement.innerText    = formatInstructionForGUI(data.pipeline.memory);
+      writebackStageElement.innerText = formatInstructionForGUI(data.pipeline.writeBack);
+
+      // Update clock cycle
+      clockCycleElement.innerText = `Clock Cycle: ${data.pipeline.clockCycle}`;
+
+      // Update special registers
+      pcValueElement.innerText = data.programCounter;
+      irValueElement.innerText = data.instructionRegister || '-';
+
+      // Update general registers
+      // Store previous register values to detect changes
+      const prevRegisters = {};
+       registersContainer.querySelectorAll('.register').forEach(regEl => {
+           const regNum = parseInt(regEl.id.slice(1));
+           const currentValue = parseInt(regEl.innerText.split(': ')[1]);
+           prevRegisters[regNum] = currentValue;
+       });
+
+      for (let i = 0; i < data.registers.length; i++) {
+        const registerElement = document.getElementById(`r${i}`);
+        const newValue = data.registers[i];
+
+        if (registerElement.innerText !== `R${i}: ${newValue}`) {
+             registerElement.innerText = `R${i}: ${newValue}`;
+             // Highlight changed registers
+             registerElement.classList.add('highlight');
+             setTimeout(() => registerElement.classList.remove('highlight'), 500);
+         }
+      }
+
+      // Update instruction queue
+      instructionQueueContainer.innerHTML = '';
+      if (data.instructionQueue && data.instructionQueue.length > 0) {
+        data.instructionQueue.forEach((instruction, index) => {
+          const queueItem = document.createElement('div');
+          queueItem.className = 'queue-item';
+          queueItem.innerText = `${index}: ${instruction}`;
+          instructionQueueContainer.appendChild(queueItem);
+        });
+      } else {
+           instructionQueueContainer.innerHTML = '<div>Queue is empty.</div>';
+      }
+
+
+      // Update memory display
+      // Store previous memory values to detect changes
+       const prevMemory = {};
+       memoryContainer.querySelectorAll('.memory-cell').forEach(memEl => {
+           const addr = parseInt(memEl.id.slice(4));
+           const currentValue = parseInt(memEl.innerText.split(': ')[1]);
+           prevMemory[addr] = currentValue;
+       });
+
+      if (data.memory) {
+        for (const [addr, value] of Object.entries(data.memory)) {
+          const memCell = document.getElementById(`mem-${addr}`);
+          if (memCell && memCell.innerText !== `Addr ${addr}: ${value}`) {
+            memCell.innerText = `Addr ${addr}: ${value}`;
+            memCell.classList.add('highlight');
+            setTimeout(() => memCell.classList.remove('highlight'), 500);
+          }
+        }
+      }
+    });
+
+    // Listen for other events
+    ipcRenderer.on('instructions-loaded', (event, count) => {
+      if (count > 0) {
+        statsBtn.disabled = false;
+        statusMessage.innerText = `Loaded ${count} instructions. Click Step or Run to start execution.`;
+        updateControlButtons(false, true, true, true); // Enable step and run
+      } else {
+         statusMessage.innerText = `No valid instructions loaded. Check instructions.txt.`;
+         updateControlButtons(true, false, false, true); // Only allow loading again
+      }
+    });
+
+    statsBtn.addEventListener('click', () => {
+      ipcRenderer.send('get-stats');
+    });
+
+    // Receive and render stats
+    ipcRenderer.on('stats-updated', (_e, stats) => {
+  perfSection.style.display = 'block';
+  statCycles.textContent  = stats.cycles;
+  statInstr.textContent   = stats.instructions;
+  statStalls.textContent  = stats.stalls;
+  statIpc.textContent     = stats.ipc.toFixed(2);
+  statHitRate.textContent = (stats.hitRate * 100).toFixed(1) + '%';
+});
+
+    ipcRenderer.on('simulation-complete', () => {
+      statusMessage.innerText = 'Simulation complete! Pipeline is empty.';
+      if (isRunning) {
+        isRunning = false;
+        runBtn.innerText = 'Run';
+        clearInterval(runInterval);
+      }
+       updateControlButtons(true, false, false, true); // Allow loading or resetting
+    });
+
+     ipcRenderer.on('simulation-error', (event, message) => {
+         statusMessage.innerText = `Error: ${message}`;
+         if (isRunning) {
+            isRunning = false;
+            runBtn.innerText = 'Run';
+            clearInterval(runInterval);
+         }
+          updateControlButtons(true, false, false, true); // Allow loading or resetting after error
+     });
+
+     ipcRenderer.on('simulation-reset-complete', () => {
+         statusMessage.innerText = 'Simulation reset. Load instructions to begin.';
+         initializeRegistersUI(); // Re-render registers to ensure they show 0
+         initializeMemoryUI(); // Re-render memory
+         updateControlButtons(true, false, false, true); // Allow loading
+         // Explicitly update GUI to show initial state immediately on reset complete
+     });
+
+
+
+  </script>
+</body>
+</html>
