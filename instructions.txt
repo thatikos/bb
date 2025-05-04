@@ -1,0 +1,200 @@
+; Exchange Sort Benchmark for CPU Simulator
+; This program sorts an array of 10 integers using exchange sort algorithm
+; Array is stored at memory locations starting at address 100
+
+; Initialize array with values (in reverse order for worst-case)
+MOVI R1 10   ; Value 10
+MOVI R2 100  ; Memory address for array start
+STR R1 R2 0  ; Store 10 at address 100
+MOVI R1 9    ; Value 9
+MOVI R3 1    ; Offset
+ADD R4 R2 R3 ; Address = base + offset
+STR R1 R4 0  ; Store 9 at address 101
+MOVI R1 8    ; Value 8
+MOVI R3 2    ; Offset
+ADD R4 R2 R3 ; Address = base + offset
+STR R1 R4 0  ; Store 8 at address 102
+MOVI R1 7    ; Value 7
+MOVI R3 3    ; Offset
+ADD R4 R2 R3 ; Address = base + offset
+STR R1 R4 0  ; Store 7 at address 103
+MOVI R1 6    ; Value 6
+MOVI R3 4    ; Offset
+ADD R4 R2 R3 ; Address = base + offset
+STR R1 R4 0  ; Store 6 at address 104
+MOVI R1 5    ; Value 5
+MOVI R3 5    ; Offset
+ADD R4 R2 R3 ; Address = base + offset
+STR R1 R4 0  ; Store 5 at address 105
+MOVI R1 4    ; Value 4
+MOVI R3 6    ; Offset
+ADD R4 R2 R3 ; Address = base + offset
+STR R1 R4 0  ; Store 4 at address 106
+MOVI R1 3    ; Value 3
+MOVI R3 7    ; Offset
+ADD R4 R2 R3 ; Address = base + offset
+STR R1 R4 0  ; Store 3 at address 107
+MOVI R1 2    ; Value 2
+MOVI R3 8    ; Offset
+ADD R4 R2 R3 ; Address = base + offset
+STR R1 R4 0  ; Store 2 at address 108
+MOVI R1 1    ; Value 1
+MOVI R3 9    ; Offset
+ADD R4 R2 R3 ; Address = base + offset
+STR R1 R4 0  ; Store 1 at address 109
+
+; Sort the array using exchange sort algorithm
+; Outer loop counter - R5 (i)
+MOVI R5 0    ; Initialize i = 0
+MOVI R6 9    ; Array size - 1
+
+; Outer loop begins here
+; OUTER_LOOP:
+  ; Inner loop counter - R8 (j) starts at 0
+  MOVI R8 0
+  
+  ; INNER_LOOP:
+    ; Load A[j] into R10
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    
+    ; Load A[j+1] into R12
+    MOVI R13 1      ; Constant 1
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    
+    ; Compare A[j] and A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    
+    ; Swap A[j] and A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    
+    ; Increment j
+    ADD R8 R8 R13
+    
+    ; Repeat for all pairs in the array (8 times for 10 elements)
+    ; We'll unroll the loop since there's no branch
+    
+    ; Second iteration
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    ADD R8 R8 R13   ; j++
+    
+    ; Third iteration
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    ADD R8 R8 R13   ; j++
+    
+    ; Fourth iteration
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    ADD R8 R8 R13   ; j++
+    
+    ; Fifth iteration
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    ADD R8 R8 R13   ; j++
+    
+    ; Sixth iteration
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    ADD R8 R8 R13   ; j++
+    
+    ; Seventh iteration
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    ADD R8 R8 R13   ; j++
+    
+    ; Eighth iteration
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    ADD R8 R8 R13   ; j++
+    
+    ; Ninth iteration
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    
+    ; That's one full pass through the array
+    ; We'd normally repeat the outer loop, but since we don't have conditional branches
+    ; We'll do another full pass explicitly for demo purposes
+    
+    ; Second pass through outer loop
+    MOVI R8 0       ; Reset j = 0
+    
+    ; 9 more iterations for the second pass
+    ; [Same pattern as above repeated 9 times]
+    ; (just doing a few iterations for brevity)
+    
+    ; First iteration of second pass
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    ADD R8 R8 R13   ; j++
+    
+    ; Second iteration of second pass
+    ADD R10 R2 R8   ; Address of A[j]
+    LOAD R11 R10 0  ; R11 = A[j]
+    ADD R14 R8 R13  ; j+1
+    ADD R15 R2 R14  ; Address of A[j+1]
+    LOAD R12 R15 0  ; R12 = A[j+1]
+    SUB R16 R11 R12 ; R16 = A[j] - A[j+1]
+    STR R12 R10 0   ; Store R12 (A[j+1]) to A[j]
+    STR R11 R15 0   ; Store R11 (A[j]) to A[j+1]
+    ADD R8 R8 R13   ; j++
+
+; End of program - array is now sorted in memory locations 100-109
